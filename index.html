@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard de Portafolio — Acciones Chilenas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1020; --card:#141b2e; --card2:#111726; --border:#232c44;
+    --text:#e8ecf7; --muted:#8894b3; --green:#3ddc97; --red:#ff6b6b;
+    --accent:#5b8def; --accent2:#f5a623; --purple:#a685f2;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 10% -10%, #1a2140 0%, var(--bg) 60%);
+    color:var(--text); padding:24px 20px 60px;
+  }
+  .wrap{max-width:1300px; margin:0 auto;}
+  header{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:22px;}
+  h1{font-size:26px; margin:0 0 4px;}
+  .subtitle{color:var(--muted); font-size:13.5px;}
+  .updated{font-size:12px; color:var(--muted); text-align:right;}
+  .badge{display:inline-block; background:#1c2740; border:1px solid var(--border); color:var(--accent); padding:3px 10px; border-radius:20px; font-size:11.5px; margin-left:6px;}
+
+  .kpis{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px;}
+  @media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  .kpi{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 18px;}
+  .kpi .label{font-size:12px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;}
+  .kpi .value{font-size:22px; font-weight:700;}
+  .kpi .sub{font-size:12.5px; margin-top:4px;}
+  .pos{color:var(--green);} .neg{color:var(--red);}
+
+  .grid2{display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-bottom:16px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px;}
+  @media(max-width:1000px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+  .card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px;}
+  .card h3{margin:0 0 4px; font-size:15px;}
+  .card .desc{color:var(--muted); font-size:12px; margin-bottom:14px;}
+  canvas{max-width:100%;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; padding:8px 10px; border-bottom:1px solid var(--border);}
+  td{padding:9px 10px; border-bottom:1px solid #1c2437;}
+  tr:hover td{background:#171f36;}
+  .tag{font-size:10.5px; padding:2px 8px; border-radius:10px; background:#1c2740; color:var(--accent); white-space:nowrap;}
+  .right{text-align:right;}
+  .center{text-align:center;}
+  .search{width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:#0e1424; color:var(--text); font-size:13px; margin-bottom:12px;}
+  .filters{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .filters button{background:#1c2740; border:1px solid var(--border); color:var(--muted); padding:6px 12px; border-radius:8px; font-size:12px; cursor:pointer;}
+  .filters button.active{color:var(--text); border-color:var(--accent); background:#1f2c4d;}
+  .note{background:#1a1f2e; border:1px solid #33405e; border-left:3px solid var(--accent2); border-radius:8px; padding:12px 14px; font-size:12.5px; color:var(--muted); line-height:1.5; margin-top:18px;}
+  .note b{color:var(--text);}
+  a{color:var(--accent);}
+  .footer-nav{display:flex; justify-content:space-between; color:var(--muted); font-size:11.5px; margin-top:30px; border-top:1px solid var(--border); padding-top:14px;}
+
+  .livebar{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px 18px; margin-bottom:18px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;}
+  .livebar input[type=text]{flex:1; min-width:220px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:#0e1424; color:var(--text); font-size:12.5px;}
+  .livebar button{background:#1c2740; border:1px solid var(--border); color:var(--text); padding:8px 14px; border-radius:8px; font-size:12.5px; cursor:pointer;}
+  .livebar button:hover{border-color:var(--accent);}
+  .livebar button.primary{background:var(--accent); border-color:var(--accent); color:#0b1020; font-weight:600;}
+  .refresh-group{display:flex; gap:6px; background:#0e1424; border:1px solid var(--border); border-radius:8px; padding:3px;}
+  .refresh-group button{background:transparent; border:none; padding:6px 12px; border-radius:6px; font-size:12px; color:var(--muted);}
+  .refresh-group button.active{background:var(--accent); color:#0b1020; font-weight:600;}
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px;}
+  .dot.off{background:#4a5372;}
+  .dot.on{background:var(--green); box-shadow:0 0 8px var(--green);}
+  .live-status{font-size:11.5px; color:var(--muted); white-space:nowrap;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>📊 Dashboard de Portafolio <span class="badge">Acciones Chilenas</span></h1>
+      <div class="subtitle">Basado en pestaña <b>COMPRAS Y DIVIDENDOS</b> — planilla ETF.xlsx (Google Drive)</div>
+    </div>
+    <div class="updated">
+      Snapshot generado: 18 jul 2026<br>
+      Precios de mercado: Bolsa de Santiago / Investing.com / LarrainVial (13–17 jul 2026)
+    </div>
+  </header>
+
+  <div class="livebar">
+    <span class="live-status"><span class="dot off" id="liveDot"></span><span id="liveLabel">Modo snapshot (sin conectar)</span></span>
+    <input type="text" id="scriptUrlInput" placeholder="Pega aquí la URL /exec de tu Google Apps Script...">
+    <button class="primary" id="btnSaveUrl">Guardar y actualizar</button>
+    <button id="btnRefreshNow">Actualizar ahora</button>
+    <div class="refresh-group" id="refreshGroup">
+      <button data-interval="0" class="active">Auto: Apagado</button>
+      <button data-interval="30000">Cada 30s</button>
+      <button data-interval="60000">Cada 1 min</button>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Inversión mensual acumulada</h3>
+      <div class="desc">Monto invertido por mes desde octubre 2023</div>
+      <canvas id="chartMonthly" height="110"></canvas>
+    </div>
+    <div class="card">
+      <h3>Asignación por sector</h3>
+      <div class="desc">% del capital invertido</div>
+      <canvas id="chartSector" height="110"></canvas>
+    </div>
+  </div>
+
+  <div class="grid3">
+    <div class="card">
+      <h3>Por estrategia</h3>
+      <div class="desc">Blue chip / Vaca lechera / Maximización / ETF / Reit</div>
+      <canvas id="chartTipoAccion" height="180"></canvas>
+    </div>
+    <div class="card">
+      <h3>Por broker</h3>
+      <div class="desc">TRI · Zesty · Itaú</div>
+      <canvas id="chartBroker" height="180"></canvas>
+    </div>
+    <div class="card">
+      <h3>Top 8 posiciones — Invertido vs. Valor actual</h3>
+      <div class="desc">Miles de CLP</div>
+      <canvas id="chartTopHoldings" height="180"></canvas>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h3>Detalle de posiciones</h3>
+    <div class="desc">21 instrumentos · ordenado por monto invertido. Click en encabezados para ordenar.</div>
+    <input class="search" id="searchBox" placeholder="Buscar acción (ej: HABITAT, ZOFRI, ENERGIA)...">
+    <div class="filters" id="filterButtons"></div>
+    <div style="overflow-x:auto;">
+      <table id="holdingsTable">
+        <thead>
+          <tr>
+            <th data-key="nombre">Acción</th>
+            <th data-key="sector">Sector</th>
+            <th data-key="tipoaccion">Estrategia</th>
+            <th class="right" data-key="cantidad">Cantidad</th>
+            <th class="right" data-key="pmp">PMP</th>
+            <th class="right" data-key="precio_actual">Precio actual</th>
+            <th class="right" data-key="monto_invertido">Invertido</th>
+            <th class="right" data-key="valor_actual">Valor actual</th>
+            <th class="right" data-key="ganancia_pct">Rent. no realizada</th>
+          </tr>
+        </thead>
+        <tbody id="holdingsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Conexión en vivo:</b> pega en la barra de arriba la URL <code>/exec</code> de tu Google Apps Script (instrucciones aparte) y presiona "Guardar y actualizar". Desde ahí puedes elegir refresco automático cada 30s o 1 min — el dashboard volverá a leer tu hoja COMPRAS Y DIVIDENDOS y recalculará todo (KPIs, gráficos y tabla) sin recargar la página. La URL queda guardada en este navegador para la próxima vez que abras el archivo.
+    <br><br>
+    <b>Qué se actualiza en vivo vs. qué no:</b> compras, cantidades, montos, broker, sector y estrategia vienen 100% de tu hoja en cada refresco. Los <b>precios de mercado</b> de las acciones (usados para calcular la ganancia no realizada) siguen siendo el snapshot manual consultado en Bolsa de Santiago/Investing.com/LarrainVial — pídeme "actualiza los precios de mercado" cuando quieras refrescarlos, ya que no hay una fuente gratuita confiable para llamarlos automáticamente desde el navegador.
+    <br><br>
+    <b>Precios sin cotización de mercado (fondos mutuos/ETFs locales):</b> CFINRENTAS, CFIBTGPLAA, CFMITNIPSA, OXIQUIM, NUAM y LATAM se muestran al costo (PMP); su ganancia aparece en 0% hasta que se confirme un valor cuota/precio actual.
+    <br><br>
+    <b>Precisión de precios:</b> algunos precios (PEHUENCHE, SOQUICOM) provienen de fuentes con fecha ligeramente distinta a hoy — trátalos como referenciales, no como cierre exacto del día.
+  </div>
+
+  <div class="footer-nav">
+    <span>Este dashboard es la base — pídeme agregar: dividendos cobrados, XIRR/TIR, comparación vs IPSA, alertas de precio, vista por broker, etc.</span>
+    <span>v1.0</span>
+  </div>
+
+</div>
+
+<script>
+const DATA = {"holdings": [{"nombre": "HABITAT", "monto_invertido": 1467591, "cantidad": 1250.0, "pmp": 1174.07, "precio_actual": 1310, "valor_actual": 1637500, "ganancia": 169909, "ganancia_pct": 11.6, "sector": "FINANCIERO", "tipoaccion": "Maximizacion", "tiene_precio_mercado": true}, {"nombre": "ZOFRI", "monto_invertido": 1052604, "cantidad": 1208.0, "pmp": 871.36, "precio_actual": 1013.9, "valor_actual": 1224791, "ganancia": 172187, "ganancia_pct": 16.4, "sector": "REIT", "tipoaccion": "Vaca Lechera", "tiene_precio_mercado": true}, {"nombre": "NTGCLGAS", "monto_invertido": 1010330, "cantidad": 1920.0, "pmp": 526.21, "precio_actual": 637.31, "valor_actual": 1223635, "ganancia": 213305, "ganancia_pct": 21.1, "sector": "ENERGIA", "tipoaccion": "Maximizacion", "tiene_precio_mercado": true}, {"nombre": "PEHUENCHE", "monto_invertido": 884597, "cantidad": 338.0, "pmp": 2617.15, "precio_actual": 2850, "valor_actual": 963300, "ganancia": 78703, "ganancia_pct": 8.9, "sector": "ENERGIA", "tipoaccion": "Vaca Lechera", "tiene_precio_mercado": true}, {"nombre": "QUINENCO", "monto_invertido": 875478, "cantidad": 213.0, "pmp": 4110.23, "precio_actual": 4279, "valor_actual": 911427, "ganancia": 35949, "ganancia_pct": 4.1, "sector": "HOLDING", "tipoaccion": "Blue chip", "tiene_precio_mercado": true}, {"nombre": "CHILE", "monto_invertido": 771097, "cantidad": 5289.0, "pmp": 145.79, "precio_actual": 188.5, "valor_actual": 996976, "ganancia": 225880, "ganancia_pct": 29.3, "sector": "FINANCIERO", "tipoaccion": "Blue chip", "tiene_precio_mercado": true}, {"nombre": "ENELGXCH", "monto_invertido": 615915, "cantidad": 1192.0, "pmp": 516.71, "precio_actual": 520.84, "valor_actual": 620841, "ganancia": 4926, "ganancia_pct": 0.8, "sector": "ENERGIA", "tipoaccion": "Vaca Lechera", "tiene_precio_mercado": true}, {"nombre": "LIPIGAS", "monto_invertido": 601629, "cantidad": 97.0, "pmp": 6202.36, "precio_actual": 8331, "valor_actual": 808107, "ganancia": 206478, "ganancia_pct": 34.3, "sector": "ENERGIA", "tipoaccion": "Maximizacion", "tiene_precio_mercado": true}, {"nombre": "CFIBTGPLAA", "monto_invertido": 513760, "cantidad": 34.0, "pmp": 15110.59, "precio_actual": 15110.588235294117, "valor_actual": 513760, "ganancia": 0, "ganancia_pct": 0.0, "sector": "FACTURA", "tipoaccion": "ETF Dividendero", "tiene_precio_mercado": false}, {"nombre": "SOQUICOM", "monto_invertido": 511912, "cantidad": 1370.0, "pmp": 373.66, "precio_actual": 382.18, "valor_actual": 523587, "ganancia": 11675, "ganancia_pct": 2.3, "sector": "ENERGIA", "tipoaccion": "Vaca Lechera", "tiene_precio_mercado": true}, {"nombre": "CFMITNIPSA", "monto_invertido": 500000, "cantidad": 153.0, "pmp": 3267.97, "precio_actual": 3267.97385620915, "valor_actual": 500000, "ganancia": 0, "ganancia_pct": 0.0, "sector": "IPSA", "tipoaccion": "ETF Dividendero", "tiene_precio_mercado": false}, {"nombre": "ENELCHILE", "monto_invertido": 450935, "cantidad": 8331.0, "pmp": 54.13, "precio_actual": 81.01, "valor_actual": 674894, "ganancia": 223959, "ganancia_pct": 49.7, "sector": "ENERGIA", "tipoaccion": "Blue chip", "tiene_precio_mercado": true}, {"nombre": "CFINRENTAS", "monto_invertido": 442365, "cantidad": 241.0, "pmp": 1835.54, "precio_actual": 1835.5394190871368, "valor_actual": 442365, "ganancia": 0, "ganancia_pct": 0.0, "sector": "REIT", "tipoaccion": "Reit", "tiene_precio_mercado": false}, {"nombre": "COLBUN", "monto_invertido": 343448, "cantidad": 2761.0, "pmp": 124.39, "precio_actual": 135.29, "valor_actual": 373536, "ganancia": 30088, "ganancia_pct": 8.8, "sector": "FINANCIERO", "tipoaccion": "Blue chip", "tiene_precio_mercado": true}, {"nombre": "VAPORES", "monto_invertido": 303637, "cantidad": 6660.0, "pmp": 45.59, "precio_actual": 46.51, "valor_actual": 309757, "ganancia": 6120, "ganancia_pct": 2.0, "sector": "INDUSTRIAL/TRANSPORTE", "tipoaccion": "Maximizacion", "tiene_precio_mercado": true}, {"nombre": "ANDINA-B", "monto_invertido": 245700, "cantidad": 130.0, "pmp": 1890.0, "precio_actual": 4699.9, "valor_actual": 610987, "ganancia": 365287, "ganancia_pct": 148.7, "sector": "CONSUMO DEFENSIVO", "tipoaccion": "Blue chip", "tiene_precio_mercado": true}, {"nombre": "OXIQUIM", "monto_invertido": 199088, "cantidad": 16.0, "pmp": 12443.0, "precio_actual": 12443.0, "valor_actual": 199088, "ganancia": 0, "ganancia_pct": 0.0, "sector": "QUIMICA E INDUSTRIAL", "tipoaccion": "Vaca Lechera", "tiene_precio_mercado": false}, {"nombre": "ILC", "monto_invertido": 166542, "cantidad": 8.0, "pmp": 20817.75, "precio_actual": 21450, "valor_actual": 171600, "ganancia": 5058, "ganancia_pct": 3.0, "sector": "HOLDING", "tipoaccion": "Maximizacion", "tiene_precio_mercado": true}, {"nombre": "AGUAS-A", "monto_invertido": 152466, "cantidad": 470.0, "pmp": 324.4, "precio_actual": 332.4, "valor_actual": 156228, "ganancia": 3762, "ganancia_pct": 2.5, "sector": "SUMINISTRO DE AGUA", "tipoaccion": "Vaca Lechera", "tiene_precio_mercado": true}, {"nombre": "NUAM", "monto_invertido": 102441, "cantidad": 17.0, "pmp": 6025.94, "precio_actual": 6025.941176470588, "valor_actual": 102441, "ganancia": 0, "ganancia_pct": 0.0, "sector": "HOLDING", "tipoaccion": "Maximizacion", "tiene_precio_mercado": false}, {"nombre": "LATAM", "monto_invertido": 96652, "cantidad": 4300.0, "pmp": 22.48, "precio_actual": 22.47720930232558, "valor_actual": 96652, "ganancia": 0, "ganancia_pct": 0.0, "sector": "AEROCOMERCIAL", "tipoaccion": "Maximizacion", "tiene_precio_mercado": false}], "total_invertido": 11308187, "total_actual": 13061472, "total_ganancia": 1753285, "by_sector": {"REIT": 1494969.0, "CONSUMO DEFENSIVO": 245700.0, "ENERGIA": 3913469.0, "FINANCIERO": 2283593.0, "INDUSTRIAL/TRANSPORTE": 303637.0, "MATERIALES BASICOS": 460392.0, "HOLDING": 1144461.0, "IPSA": 500000.0, "FACTURA": 513760.0, "AEROCOMERCIAL": 96652.0, "SUMINISTRO DE AGUA": 152466.0, "QUIMICA E INDUSTRIAL": 199088.0}, "by_broker": {"TRI": 2216110.0, "zesty": 8197452.0, "itau": 894625.0}, "by_tipoaccion": {"Vaca Lechera": 3416582.0, "Blue chip": 2636918.0, "Maximizacion": 3798562.0, "Reit": 442365.0, "ETF Dividendero": 1013760.0}, "by_month": {"2023-10": 495583.0, "2024-02": 247993.0, "2024-05": 301173.0, "2024-06": 296921.0, "2025-08": 300000.0, "2025-01": 255150.0, "2025-03": 201280.0, "2025-04": 120270.0, "2025-09": 504729.0, "2025-10": 251194.0, "2025-11": 406157.0, "2025-12": 647145.0, "2025-07": 200000.0, "2026-01": 367606.0, "2026-02": 254713.0, "2026-03": 949313.0, "2026-04": 865337.0, "2026-05": 1685411.0, "2026-06": 1752528.0, "2026-07": 705684.0}, "transactions": [{"n": "1", "nombre": "ZOFRI", "fecha": "11-10-2023", "monto": 249883.0, "precio": 609.47, "cantidad": 410.0, "broker": "TRI", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "2", "nombre": "ANDINA-B", "fecha": "19-10-2023", "monto": 245700.0, "precio": 1890.0, "cantidad": 130.0, "broker": "TRI", "sector": "CONSUMO DEFENSIVO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "3", "nombre": "ENELCHILE", "fecha": "14-02-2024", "monto": 247993.0, "precio": 54.54, "cantidad": 4547.0, "broker": "TRI", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "4", "nombre": "HABITAT", "fecha": "15-05-2024", "monto": 197138.0, "precio": 925.53, "cantidad": 213.0, "broker": "TRI", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "5", "nombre": "ENELCHILE", "fecha": "24-05-2024", "monto": 104035.0, "precio": 54.65, "cantidad": 1904.0, "broker": "TRI", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "6", "nombre": "ENELCHILE", "fecha": "03-06-2024", "monto": 98907.0, "precio": 52.61, "cantidad": 1880.0, "broker": "TRI", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "7", "nombre": "COLBUN", "fecha": "12-06-2024", "monto": 198014.0, "precio": 118.5, "cantidad": 1671.0, "broker": "TRI", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "8", "nombre": "HABITAT", "fecha": "01-08-2025", "monto": 250000.0, "precio": 856.61, "cantidad": 289.0, "broker": "TRI", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "9", "nombre": "NTGCLGAS", "fecha": "21-01-2025", "monto": 255150.0, "precio": 405.0, "cantidad": 630.0, "broker": "TRI", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "10", "nombre": "CHILE", "fecha": "24-03-2025", "monto": 201280.0, "precio": 125.8, "cantidad": 1600.0, "broker": "TRI", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "11", "nombre": "CHILE", "fecha": "08-04-2025", "monto": 120270.0, "precio": 122.8, "cantidad": 979.0, "broker": "TRI", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "13", "nombre": "LIPIGAS", "fecha": "01-09-2025", "monto": 253485.0, "precio": 5895.0, "cantidad": 43.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "14", "nombre": "LIPIGAS", "fecha": "03-09-2025", "monto": 251244.0, "precio": 5982.0, "cantidad": 42.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "15", "nombre": "VAPORES", "fecha": "20-10-2025", "monto": 50382.0, "precio": 47.5, "cantidad": 1060.0, "broker": "zesty", "sector": "INDUSTRIAL/TRANSPORTE", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "16", "nombre": "SOQUICOM", "fecha": "20-10-2025", "monto": 200812.0, "precio": 375.0, "cantidad": 535.0, "broker": "zesty", "sector": "MATERIALES BASICOS", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "17", "nombre": "VAPORES", "fecha": "03-11-2025", "monto": 51700.0, "precio": 47.0, "cantidad": 1100.0, "broker": "zesty", "sector": "INDUSTRIAL/TRANSPORTE", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "18", "nombre": "SOQUICOM", "fecha": "18-11-2025", "monto": 101787.0, "precio": 377.0, "cantidad": 270.0, "broker": "zesty", "sector": "MATERIALES BASICOS", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "19", "nombre": "QUINENCO", "fecha": "18-11-2025", "monto": 52644.0, "precio": 4387.0, "cantidad": 12.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "20", "nombre": "QUINENCO", "fecha": "18-11-2025", "monto": 48290.0, "precio": 4390.0, "cantidad": 11.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "21", "nombre": "ZOFRI", "fecha": "25-11-2025", "monto": 50726.0, "precio": 1056.0, "cantidad": 48.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "22", "nombre": "COLBUN", "fecha": "25-11-2025", "monto": 50540.0, "precio": 140.0, "cantidad": 360.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "23", "nombre": "ZOFRI", "fecha": "26-11-2025", "monto": 50470.0, "precio": 1009.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "24", "nombre": "PEHUENCHE", "fecha": "10-12-2025", "monto": 50166.0, "precio": 2787.0, "cantidad": 18.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "25", "nombre": "ENELGXCH", "fecha": "10-12-2025", "monto": 50489.0, "precio": 495.0, "cantidad": 102.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "26", "nombre": "NTGCLGAS", "fecha": "11-12-2025", "monto": 101160.0, "precio": 562.0, "cantidad": 180.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "27", "nombre": "NTGCLGAS", "fecha": "11-12-2025", "monto": 114000.0, "precio": 570.0, "cantidad": 200.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "28", "nombre": "ENELGXCH", "fecha": "15-12-2025", "monto": 50000.0, "precio": 500.0, "cantidad": 100.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "29", "nombre": "NTGCLGAS", "fecha": "15-12-2025", "monto": 117940.0, "precio": 589.0, "cantidad": 200.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "30", "nombre": "NTGCLGAS", "fecha": "16-12-2025", "monto": 58750.0, "precio": 587.0, "cantidad": 100.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "31", "nombre": "QUINENCO", "fecha": "26-12-2025", "monto": 52980.0, "precio": 4415.0, "cantidad": 12.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "32", "nombre": "NTGCLGAS", "fecha": "26-12-2025", "monto": 51660.0, "precio": 574.0, "cantidad": 90.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "33", "nombre": "CFINRENTAS", "fecha": "10-07-2025", "monto": 50000.0, "precio": 1660.0, "cantidad": 30.0, "broker": "itau", "sector": "REIT", "tipo": "Fondo mutuo", "tipoaccion": "Reit", "pais": "Chile"}, {"n": "34", "nombre": "CFINRENTAS", "fecha": "18-07-2025", "monto": 50000.0, "precio": 1654.0, "cantidad": 30.0, "broker": "itau", "sector": "REIT", "tipo": "Fondo mutuo", "tipoaccion": "Reit", "pais": "Chile"}, {"n": "35", "nombre": "CFINRENTAS", "fecha": "24-07-2025", "monto": 50000.0, "precio": 1600.0, "cantidad": 31.0, "broker": "itau", "sector": "REIT", "tipo": "Fondo mutuo", "tipoaccion": "Reit", "pais": "Chile"}, {"n": "36", "nombre": "CFINRENTAS", "fecha": "29-07-2025", "monto": 50000.0, "precio": 1589.0, "cantidad": 31.0, "broker": "itau", "sector": "REIT", "tipo": "Fondo mutuo", "tipoaccion": "Reit", "pais": "Chile"}, {"n": "37", "nombre": "CFINRENTAS", "fecha": "01-08-2025", "monto": 50000.0, "precio": 1580.0, "cantidad": 31.0, "broker": "itau", "sector": "REIT", "tipo": "Fondo mutuo", "tipoaccion": "Reit", "pais": "Chile"}, {"n": "38", "nombre": "CFMITNIPSA", "fecha": "", "monto": 500000.0, "precio": 3248.0, "cantidad": 153.0, "broker": "itau", "sector": "IPSA", "tipo": "NIPSA", "tipoaccion": "ETF Dividendero", "pais": "Chile"}, {"n": "39", "nombre": "CFIBTGPLAA", "fecha": "06-01-2026", "monto": 14932.0, "precio": 14932.0, "cantidad": 1.0, "broker": "zesty", "sector": "FACTURA", "tipo": "Fondo mutuo conservador", "tipoaccion": "ETF Dividendero", "pais": "Chile"}, {"n": "40", "nombre": "PEHUENCHE", "fecha": "12-01-2026", "monto": 50274.0, "precio": 2793.0, "cantidad": 18.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "41", "nombre": "PEHUENCHE", "fecha": "13-01-2026", "monto": 81200.0, "precio": 2800.0, "cantidad": 29.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "42", "nombre": "HABITAT", "fecha": "14-01-2026", "monto": 53830.0, "precio": 1538.0, "cantidad": 35.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "43", "nombre": "HABITAT", "fecha": "15-01-2026", "monto": 50457.0, "precio": 1529.0, "cantidad": 33.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "44", "nombre": "HABITAT", "fecha": "19-01-2026", "monto": 51173.0, "precio": 1505.0, "cantidad": 34.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "45", "nombre": "HABITAT", "fecha": "21-01-2026", "monto": 36000.0, "precio": 1440.0, "cantidad": 25.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "46", "nombre": "HABITAT", "fecha": "21-01-2026", "monto": 29740.0, "precio": 1487.0, "cantidad": 20.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "47", "nombre": "PEHUENCHE", "fecha": "02-02-2026", "monto": 51224.0, "precio": 2696.0, "cantidad": 19.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "48", "nombre": "SOQUICOM", "fecha": "02-02-2026", "monto": 50490.0, "precio": 374.0, "cantidad": 135.0, "broker": "zesty", "sector": "MATERIALES BASICOS", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "49", "nombre": "QUINENCO", "fecha": "16-02-2026", "monto": 51981.0, "precio": 4332.0, "cantidad": 12.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "50", "nombre": "HABITAT", "fecha": "23-02-2026", "monto": 50180.0, "precio": 1394.0, "cantidad": 36.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "51", "nombre": "HABITAT", "fecha": "24-02-2026", "monto": 50838.0, "precio": 1374.0, "cantidad": 37.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "52", "nombre": "QUINENCO", "fecha": "05-03-2026", "monto": 50399.0, "precio": 4200.0, "cantidad": 12.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "53", "nombre": "CFIBTGPLAA", "fecha": "09-03-2026", "monto": 498828.0, "precio": 15116.0, "cantidad": 33.0, "broker": "zesty", "sector": "FACTURA", "tipo": "Fondo mutuo conservador", "tipoaccion": "ETF Dividendero", "pais": "Chile"}, {"n": "54", "nombre": "COLBUN", "fecha": "10-03-2026", "monto": 49989.0, "precio": 131.0, "cantidad": 380.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "55", "nombre": "LATAM", "fecha": "10-03-2026", "monto": 51612.0, "precio": 22.0, "cantidad": 2300.0, "broker": "zesty", "sector": "AEROCOMERCIAL", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "56", "nombre": "QUINENCO", "fecha": "10-03-2026", "monto": 50233.0, "precio": 4186.0, "cantidad": 12.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "57", "nombre": "CHILE", "fecha": "23-03-2026", "monto": 49512.0, "precio": 165.0, "cantidad": 300.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "58", "nombre": "CHILE", "fecha": "25-03-2026", "monto": 49440.0, "precio": 165.0, "cantidad": 300.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "59", "nombre": "COLBUN", "fecha": "25-03-2026", "monto": 44905.0, "precio": 128.0, "cantidad": 350.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "60", "nombre": "ZOFRI", "fecha": "25-03-2026", "monto": 50215.0, "precio": 1004.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "61", "nombre": "NTGCLGAS", "fecha": "31-03-2026", "monto": 54180.0, "precio": 602.0, "cantidad": 90.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "62", "nombre": "NTGCLGAS", "fecha": "14-04-2026", "monto": 108540.0, "precio": 603.0, "cantidad": 180.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "63", "nombre": "NTGCLGAS", "fecha": "16-04-2026", "monto": 101830.0, "precio": 599.0, "cantidad": 170.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "64", "nombre": "ZOFRI", "fecha": "17-04-2026", "monto": 102000.0, "precio": 1020.0, "cantidad": 100.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "65", "nombre": "ZOFRI", "fecha": "21-04-2026", "monto": 51000.0, "precio": 1020.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "66", "nombre": "PEHUENCHE", "fecha": "23-04-2026", "monto": 50540.0, "precio": 2660.0, "cantidad": 19.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "67", "nombre": "QUINENCO", "fecha": "23-04-2026", "monto": 52621.0, "precio": 4385.0, "cantidad": 12.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "68", "nombre": "LATAM", "fecha": "24-04-2026", "monto": 45040.0, "precio": 23.0, "cantidad": 2000.0, "broker": "zesty", "sector": "AEROCOMERCIAL", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "69", "nombre": "QUINENCO", "fecha": "27-04-2026", "monto": 52980.0, "precio": 4415.0, "cantidad": 12.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "70", "nombre": "CHILE", "fecha": "27-04-2026", "monto": 51075.0, "precio": 170.0, "cantidad": 300.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "71", "nombre": "CHILE", "fecha": "28-04-2026", "monto": 50520.0, "precio": 168.0, "cantidad": 300.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "72", "nombre": "HABITAT", "fecha": "28-04-2026", "monto": 49595.0, "precio": 1417.0, "cantidad": 35.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "73", "nombre": "ZOFRI", "fecha": "29-04-2026", "monto": 50650.0, "precio": 1013.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "74", "nombre": "QUINENCO", "fecha": "29-04-2026", "monto": 51826.0, "precio": 4319.0, "cantidad": 12.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "75", "nombre": "NTGCLGAS", "fecha": "29-04-2026", "monto": 47120.0, "precio": 589.0, "cantidad": 80.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "76", "nombre": "CHILE", "fecha": "05-05-2026", "monto": 49740.0, "precio": 166.0, "cantidad": 300.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "77", "nombre": "ZOFRI", "fecha": "06-05-2026", "monto": 50500.0, "precio": 1010.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "78", "nombre": "ZOFRI", "fecha": "06-05-2026", "monto": 97100.0, "precio": 971.0, "cantidad": 100.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "79", "nombre": "ILC", "fecha": "06-05-2026", "monto": 60513.0, "precio": 20171.0, "cantidad": 3.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "80", "nombre": "ENELGXCH", "fecha": "11-05-2026", "monto": 204800.0, "precio": 512.0, "cantidad": 400.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "81", "nombre": "HABITAT", "fecha": "11-05-2026", "monto": 111200.0, "precio": 1390.0, "cantidad": 80.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "82", "nombre": "QUINENCO", "fecha": "11-05-2026", "monto": 100500.0, "precio": 4020.0, "cantidad": 25.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "83", "nombre": "QUINENCO", "fecha": "12-05-2026", "monto": 51736.0, "precio": 3979.0, "cantidad": 13.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "84", "nombre": "QUINENCO", "fecha": "14-05-2026", "monto": 50576.0, "precio": 3883.0, "cantidad": 13.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "85", "nombre": "HABITAT", "fecha": "14-05-2026", "monto": 5396.0, "precio": 1349.0, "cantidad": 4.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "86", "nombre": "CHILE", "fecha": "15-05-2026", "monto": 50493.0, "precio": 163.0, "cantidad": 310.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "87", "nombre": "VAPORES", "fecha": "15-05-2026", "monto": 201555.0, "precio": 44.79, "cantidad": 4500.0, "broker": "zesty", "sector": "INDUSTRIAL/TRANSPORTE", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "88", "nombre": "AGUAS-A", "fecha": "15-05-2026", "monto": 50269.0, "precio": 314.0, "cantidad": 160.0, "broker": "zesty", "sector": "SUMINISTRO DE AGUA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "89", "nombre": "CHILE", "fecha": "18-05-2026", "monto": 49191.0, "precio": 164.0, "cantidad": 300.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "90", "nombre": "ILC", "fecha": "18-05-2026", "monto": 41350.0, "precio": 20650.0, "cantidad": 2.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "91", "nombre": "ENELGXCH", "fecha": "19-05-2026", "monto": 103400.0, "precio": 517.0, "cantidad": 200.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "92", "nombre": "ENELGXCH", "fecha": "22-05-2026", "monto": 51806.0, "precio": 518.0, "cantidad": 100.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "93", "nombre": "QUINENCO", "fecha": "22-05-2026", "monto": 51854.0, "precio": 3988.0, "cantidad": 13.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "94", "nombre": "OXIQUIM", "fecha": "22-05-2026", "monto": 199088.0, "precio": 12443.0, "cantidad": 16.0, "broker": "zesty", "sector": "QUIMICA E INDUSTRIAL", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "95", "nombre": "ZOFRI", "fecha": "25-05-2026", "monto": 50300.0, "precio": 1006.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "96", "nombre": "HABITAT", "fecha": "26-05-2026", "monto": 54044.0, "precio": 1351.0, "cantidad": 40.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "97", "nombre": "ENELGXCH", "fecha": "01-06-2026", "monto": 53700.0, "precio": 537.0, "cantidad": 100.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "98", "nombre": "ZOFRI", "fecha": "01-06-2026", "monto": 50650.0, "precio": 1013.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "99", "nombre": "HABITAT", "fecha": "01-06-2026", "monto": 54000.0, "precio": 1350.0, "cantidad": 40.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "100", "nombre": "CFINRENTAS", "fecha": "02-06-2026", "monto": 48387.0, "precio": 2200.0, "cantidad": 22.0, "broker": "itau", "sector": "REIT", "tipo": "Fondo mutuo", "tipoaccion": "Reit", "pais": "Chile"}, {"n": "101", "nombre": "CHILE", "fecha": "02-06-2026", "monto": 49437.0, "precio": 165.0, "cantidad": 300.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "102", "nombre": "QUINENCO", "fecha": "04-06-2026", "monto": 56850.0, "precio": 3790.0, "cantidad": 15.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "103", "nombre": "HABITAT", "fecha": "04-06-2026", "monto": 54000.0, "precio": 1350.0, "cantidad": 49.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "104", "nombre": "ZOFRI", "fecha": "04-06-2026", "monto": 50260.0, "precio": 1005.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "105", "nombre": "ZOFRI", "fecha": "08-06-2026", "monto": 49500.0, "precio": 990.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "106", "nombre": "QUINENCO", "fecha": "08-06-2026", "monto": 100008.0, "precio": 3704.0, "cantidad": 27.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "107", "nombre": "HABITAT", "fecha": "08-06-2026", "monto": 53800.0, "precio": 1345.0, "cantidad": 40.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "108", "nombre": "AGUAS-A", "fecha": "08-06-2026", "monto": 52451.0, "precio": 328.0, "cantidad": 160.0, "broker": "zesty", "sector": "SUMINISTRO DE AGUA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "109", "nombre": "CHILE", "fecha": "08-06-2026", "monto": 50139.0, "precio": 167.0, "cantidad": 300.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Blue chip", "pais": "Chile"}, {"n": "110", "nombre": "CFINRENTAS", "fecha": "09-06-2026", "monto": 48290.0, "precio": 2195.0, "cantidad": 22.0, "broker": "itau", "sector": "REIT", "tipo": "Fondo mutuo", "tipoaccion": "Reit", "pais": "Chile"}, {"n": "111", "nombre": "ILC", "fecha": "09-06-2026", "monto": 21379.0, "precio": 21379.0, "cantidad": 1.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "112", "nombre": "ZOFRI", "fecha": "09-06-2026", "monto": 50000.0, "precio": 1000.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "113", "nombre": "CFINRENTAS", "fecha": "10-06-2026", "monto": 47740.0, "precio": 2170.0, "cantidad": 22.0, "broker": "TRI", "sector": "REIT", "tipo": "Fondo mutuo", "tipoaccion": "Reit", "pais": "Chile"}, {"n": "114", "nombre": "HABITAT", "fecha": "11-06-2026", "monto": 54000.0, "precio": 1350.0, "cantidad": 40.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "115", "nombre": "HABITAT", "fecha": "11-06-2026", "monto": 53400.0, "precio": 1335.0, "cantidad": 40.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "116", "nombre": "PEHUENCHE", "fecha": "11-06-2026", "monto": 52800.0, "precio": 2640.0, "cantidad": 20.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "117", "nombre": "ZOFRI", "fecha": "15-06-2026", "monto": 49350.0, "precio": 987.0, "cantidad": 50.0, "broker": "zesty", "sector": "REIT", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "118", "nombre": "LIPIGAS", "fecha": "18-06-2026", "monto": 48900.0, "precio": 8150.0, "cantidad": 6.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "119", "nombre": "LIPIGAS", "fecha": "19-06-2026", "monto": 48000.0, "precio": 8000.0, "cantidad": 6.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "120", "nombre": "NUAM", "fecha": "19-06-2026", "monto": 49562.0, "precio": 6195.0, "cantidad": 8.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "121", "nombre": "PEHUENCHE", "fecha": "22-06-2026", "monto": 51600.0, "precio": 2580.0, "cantidad": 20.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "122", "nombre": "HABITAT", "fecha": "23-06-2026", "monto": 53000.0, "precio": 1325.0, "cantidad": 40.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "123", "nombre": "SOQUICOM", "fecha": "23-06-2026", "monto": 51800.0, "precio": 370.0, "cantidad": 140.0, "broker": "zesty", "sector": "MATERIALES BASICOS", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "124", "nombre": "HABITAT", "fecha": "24-06-2026", "monto": 52200.0, "precio": 1305.0, "cantidad": 40.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "125", "nombre": "PEHUENCHE", "fecha": "25-06-2026", "monto": 51276.0, "precio": 2564.0, "cantidad": 20.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "126", "nombre": "SOQUICOM", "fecha": "26-06-2026", "monto": 55503.0, "precio": 370.0, "cantidad": 150.0, "broker": "zesty", "sector": "MATERIALES BASICOS", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "127", "nombre": "CFINRENTAS", "fecha": "30-06-2026", "monto": 47948.0, "precio": 2179.0, "cantidad": 22.0, "broker": "itau", "sector": "REIT", "tipo": "Fondo mutuo", "tipoaccion": "Reit", "pais": "Chile"}, {"n": "128", "nombre": "ENELGXCH", "fecha": "30-06-2026", "monto": 48420.0, "precio": 538.0, "cantidad": 90.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "129", "nombre": "ILC", "fecha": "30-06-2026", "monto": 43300.0, "precio": 21650.0, "cantidad": 2.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "130", "nombre": "AGUAS-A", "fecha": "01-07-2026", "monto": 49746.0, "precio": 332.0, "cantidad": 150.0, "broker": "zesty", "sector": "SUMINISTRO DE AGUA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "131", "nombre": "PEHUENCHE", "fecha": "06-07-2026", "monto": 101400.0, "precio": 2535.0, "cantidad": 40.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "132", "nombre": "ENELGXCH", "fecha": "07-07-2026", "monto": 53300.0, "precio": 533.0, "cantidad": 100.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "136", "nombre": "HABITAT", "fecha": "10-07-2026", "monto": 103600.0, "precio": 1295.0, "cantidad": 80.0, "broker": "zesty", "sector": "FINANCIERO", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "137", "nombre": "PEHUENCHE", "fecha": "10-07-2026", "monto": 101996.0, "precio": 2550.0, "cantidad": 40.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "138", "nombre": "NUAM", "fecha": "14-07-2026", "monto": 52879.0, "precio": 5865.0, "cantidad": 9.0, "broker": "zesty", "sector": "HOLDING", "tipo": "Accion", "tipoaccion": "Maximizacion", "pais": "Chile"}, {"n": "139", "nombre": "PEHUENCHE", "fecha": "14-07-2026", "monto": 191243.0, "precio": 2550.0, "cantidad": 75.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "140", "nombre": "PEHUENCHE", "fecha": "30-06-2026", "monto": 50878.0, "precio": 2544.0, "cantidad": 20.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}, {"n": "141", "nombre": "SOQUICOM", "fecha": "17-07-2026", "monto": 51520.0, "precio": 368.0, "cantidad": 140.0, "broker": "zesty", "sector": "ENERGIA", "tipo": "Accion", "tipoaccion": "Vaca Lechera", "pais": "Chile"}]}
+;
+
+const fmt = n => new Intl.NumberFormat('es-CL',{maximumFractionDigits:0}).format(n);
+const fmtPct = n => (n>=0?'+':'') + n.toFixed(1) + '%';
+
+// Precios de mercado conocidos (último snapshot manual). Si un instrumento no
+// está aquí, se muestra al costo (PMP) hasta que se actualicen los precios.
+const CURRENT_PRICES = {
+  'HABITAT':1310, 'ZOFRI':1013.90, 'NTGCLGAS':637.31, 'PEHUENCHE':2850, 'QUINENCO':4279,
+  'CHILE':188.50, 'ENELGXCH':520.84, 'LIPIGAS':8331, 'SOQUICOM':382.18, 'ENELCHILE':81.01,
+  'COLBUN':135.29, 'VAPORES':46.51, 'ANDINA-B':4699.90, 'ILC':21450, 'AGUAS-A':332.40
+};
+
+// ---- Cómputo de agregados a partir de transacciones crudas ----
+// Se usa tanto para los datos iniciales embebidos como para los datos
+// que lleguen en vivo desde el Apps Script.
+function computeAggregates(transactions){
+  const byStock = {};
+  const bySector = {};
+  const byBroker = {};
+  const byTipo = {};
+  const byMonth = {};
+
+  transactions.forEach(t=>{
+    const nombre = t.nombre;
+    if(!byStock[nombre]) byStock[nombre] = {monto:0, cantidad:0, sector:t.sector, tipoaccion:t.tipoaccion};
+    byStock[nombre].monto += t.monto;
+    byStock[nombre].cantidad += t.cantidad;
+    byStock[nombre].sector = t.sector || byStock[nombre].sector;
+    byStock[nombre].tipoaccion = t.tipoaccion || byStock[nombre].tipoaccion;
+
+    bySector[t.sector] = (bySector[t.sector]||0) + t.monto;
+    byBroker[t.broker] = (byBroker[t.broker]||0) + t.monto;
+    byTipo[t.tipoaccion] = (byTipo[t.tipoaccion]||0) + t.monto;
+
+    if (t.fecha){
+      const parts = t.fecha.split('-');
+      if (parts.length === 3){
+        const key = parts[2]+'-'+parts[1];
+        byMonth[key] = (byMonth[key]||0) + t.monto;
+      }
+    }
+  });
+
+  const holdings = Object.entries(byStock).map(([nombre,s])=>{
+    const pmp = s.cantidad ? s.monto/s.cantidad : 0;
+    const tienePrecio = CURRENT_PRICES.hasOwnProperty(nombre);
+    const precio = tienePrecio ? CURRENT_PRICES[nombre] : pmp;
+    const valorActual = precio * s.cantidad;
+    const ganancia = valorActual - s.monto;
+    return {
+      nombre, monto_invertido: Math.round(s.monto), cantidad: s.cantidad,
+      pmp: Math.round(pmp*100)/100, precio_actual: precio, valor_actual: Math.round(valorActual),
+      ganancia: Math.round(ganancia), ganancia_pct: s.monto ? Math.round(ganancia/s.monto*1000)/10 : 0,
+      sector: s.sector, tipoaccion: s.tipoaccion, tiene_precio_mercado: tienePrecio
+    };
+  }).sort((a,b)=>b.monto_invertido-a.monto_invertido);
+
+  const total_invertido = holdings.reduce((a,h)=>a+h.monto_invertido,0);
+  const total_actual = holdings.reduce((a,h)=>a+h.valor_actual,0);
+
+  return {
+    transactions, holdings, by_sector:bySector, by_broker:byBroker,
+    by_tipoaccion:byTipo, by_month:byMonth,
+    total_invertido, total_actual, total_ganancia: total_actual-total_invertido
+  };
+}
+
+// ---- Chart defaults ----
+Chart.defaults.color = '#8894b3';
+Chart.defaults.borderColor = '#232c44';
+Chart.defaults.font.family = "-apple-system,Segoe UI,Roboto,Arial";
+const palette = ['#5b8def','#3ddc97','#f5a623','#a685f2','#ff6b6b','#4fd1e6','#e879b0','#9ae66e','#ffd166','#748ffc'];
+
+let charts = {}; // instancias vivas, para poder destruirlas y re-crearlas
+let currentData = null;
+let sortKey = 'monto_invertido';
+let sortDir = -1;
+let activeFilter = 'Todas';
+let searchTerm = '';
+
+function destroyCharts(){
+  Object.values(charts).forEach(c=>c.destroy());
+  charts = {};
+}
+
+function renderKPIs(data){
+  const gananciaPct = data.total_invertido ? (data.total_ganancia/data.total_invertido*100) : 0;
+  const sectorTop = Object.entries(data.by_sector).sort((a,b)=>b[1]-a[1])[0];
+  const kpis = [
+    {label:'Total invertido', value:'$'+fmt(data.total_invertido), sub:data.transactions.length+' transacciones', cls:''},
+    {label:'Valor actual estimado', value:'$'+fmt(data.total_actual), sub:data.holdings.length+' instrumentos', cls:''},
+    {label:'Ganancia / pérdida no realizada', value:(data.total_ganancia>=0?'+':'')+'$'+fmt(data.total_ganancia), sub:fmtPct(gananciaPct), cls:data.total_ganancia>=0?'pos':'neg'},
+    {label:'Sector con mayor peso', value:sectorTop[0], sub:(sectorTop[1]/data.total_invertido*100).toFixed(1)+'% del capital', cls:''},
+    {label:'Mayor posición', value:data.holdings[0].nombre, sub:'$'+fmt(data.holdings[0].monto_invertido)+' invertidos', cls:''},
+  ];
+  document.getElementById('kpis').innerHTML = kpis.map(k=>`
+    <div class="kpi">
+      <div class="label">${k.label}</div>
+      <div class="value ${k.cls}">${k.value}</div>
+      <div class="sub ${k.cls}">${k.sub}</div>
+    </div>`).join('');
+}
+
+function renderCharts(data){
+  destroyCharts();
+
+  const months = Object.keys(data.by_month).sort();
+  charts.monthly = new Chart(document.getElementById('chartMonthly'), {
+    type:'bar',
+    data:{ labels:months, datasets:[{ label:'Invertido en el mes', data:months.map(m=>data.by_month[m]), backgroundColor:'#5b8def', borderRadius:4 }] },
+    options:{ plugins:{legend:{display:false}}, scales:{
+      x:{ticks:{maxRotation:60,minRotation:60,font:{size:10}}, grid:{display:false}},
+      y:{ticks:{callback:v=>'$'+fmt(v)}, grid:{color:'#1c2437'}}
+    }}
+  });
+
+  const sectorEntries = Object.entries(data.by_sector).sort((a,b)=>b[1]-a[1]);
+  charts.sector = new Chart(document.getElementById('chartSector'), {
+    type:'doughnut',
+    data:{ labels:sectorEntries.map(e=>e[0]), datasets:[{data:sectorEntries.map(e=>e[1]), backgroundColor:palette, borderColor:'#141b2e', borderWidth:2}] },
+    options:{ plugins:{legend:{position:'right', labels:{boxWidth:12, font:{size:11}}}} }
+  });
+
+  const tipoEntries = Object.entries(data.by_tipoaccion).sort((a,b)=>b[1]-a[1]);
+  charts.tipo = new Chart(document.getElementById('chartTipoAccion'), {
+    type:'doughnut',
+    data:{ labels:tipoEntries.map(e=>e[0]), datasets:[{data:tipoEntries.map(e=>e[1]), backgroundColor:palette, borderColor:'#141b2e', borderWidth:2}] },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:10, font:{size:10}}}} }
+  });
+
+  const brokerEntries = Object.entries(data.by_broker).sort((a,b)=>b[1]-a[1]);
+  charts.broker = new Chart(document.getElementById('chartBroker'), {
+    type:'pie',
+    data:{ labels:brokerEntries.map(e=>e[0]), datasets:[{data:brokerEntries.map(e=>e[1]), backgroundColor:['#5b8def','#3ddc97','#f5a623','#a685f2'], borderColor:'#141b2e', borderWidth:2}] },
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:10, font:{size:10}}}} }
+  });
+
+  const top8 = data.holdings.slice(0,8);
+  charts.top = new Chart(document.getElementById('chartTopHoldings'), {
+    type:'bar',
+    data:{ labels:top8.map(h=>h.nombre), datasets:[
+      {label:'Invertido', data:top8.map(h=>h.monto_invertido), backgroundColor:'#5b8def', borderRadius:3},
+      {label:'Valor actual', data:top8.map(h=>h.valor_actual), backgroundColor:'#3ddc97', borderRadius:3}
+    ]},
+    options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}}}, scales:{
+      x:{ticks:{font:{size:10}}, grid:{display:false}},
+      y:{ticks:{callback:v=>'$'+fmt(v)}, grid:{color:'#1c2437'}}
+    }}
+  });
+}
+
+function renderFilters(data){
+  const strategies = ['Todas', ...new Set(data.holdings.map(h=>h.tipoaccion))];
+  document.getElementById('filterButtons').innerHTML = strategies.map(s=>
+    `<button data-f="${s}" class="${s===activeFilter?'active':''}">${s}</button>`
+  ).join('');
+}
+
+function renderTable(){
+  if (!currentData) return;
+  let rows = currentData.holdings.filter(h=>{
+    const matchesFilter = activeFilter==='Todas' || h.tipoaccion===activeFilter;
+    const matchesSearch = !searchTerm || h.nombre.toLowerCase().includes(searchTerm) || h.sector.toLowerCase().includes(searchTerm);
+    return matchesFilter && matchesSearch;
+  });
+  rows.sort((a,b)=>{
+    const av = a[sortKey], bv = b[sortKey];
+    if (typeof av === 'string') return sortDir * av.localeCompare(bv);
+    return sortDir * (av - bv);
+  });
+  document.getElementById('holdingsBody').innerHTML = rows.map(h=>{
+    const cls = h.ganancia_pct > 0 ? 'pos' : (h.ganancia_pct < 0 ? 'neg' : '');
+    const marketFlag = h.tiene_precio_mercado ? '' : ' <span class="tag" style="color:#f5a623;border-color:#f5a623;">sin cotización</span>';
+    return `<tr>
+      <td><b>${h.nombre}</b></td>
+      <td><span class="tag">${h.sector}</span></td>
+      <td>${h.tipoaccion}</td>
+      <td class="right">${fmt(h.cantidad)}</td>
+      <td class="right">$${fmt(h.pmp)}</td>
+      <td class="right">$${fmt(h.precio_actual)}${marketFlag}</td>
+      <td class="right">$${fmt(h.monto_invertido)}</td>
+      <td class="right">$${fmt(h.valor_actual)}</td>
+      <td class="right ${cls}">${fmtPct(h.ganancia_pct)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderAll(data){
+  currentData = data;
+  renderKPIs(data);
+  renderCharts(data);
+  renderFilters(data);
+  renderTable();
+}
+
+document.querySelectorAll('#holdingsTable th').forEach(th=>{
+  th.style.cursor = 'pointer';
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.key;
+    if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
+    renderTable();
+  });
+});
+
+document.getElementById('filterButtons').addEventListener('click', e=>{
+  if (e.target.tagName !== 'BUTTON') return;
+  activeFilter = e.target.dataset.f;
+  document.querySelectorAll('#filterButtons button').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  renderTable();
+});
+
+document.getElementById('searchBox').addEventListener('input', e=>{
+  searchTerm = e.target.value.toLowerCase();
+  renderTable();
+});
+
+// ================= Conexión en vivo con Google Apps Script =================
+const LS_KEY = 'portfolioScriptUrl';
+let refreshTimer = null;
+let refreshIntervalMs = 0;
+
+function setLiveStatus(mode, text){
+  document.getElementById('liveDot').className = 'dot ' + (mode === 'on' ? 'on' : 'off');
+  document.getElementById('liveLabel').textContent = text;
+}
+
+async function fetchFromScript(url){
+  setLiveStatus('off', 'Conectando...');
+  try{
+    const res = await fetch(url, {cache:'no-store'});
+    if (!res.ok){
+      setLiveStatus('off', 'El servidor respondió con estado ' + res.status + ' (' + res.statusText + ')');
+      return;
+    }
+    const json = await res.json();
+    if (json.error){
+      setLiveStatus('off', 'Error del script: ' + json.error);
+      return;
+    }
+    const data = computeAggregates(json.transactions);
+    renderAll(data);
+    const now = new Date();
+    setLiveStatus('on', 'Conectado · ' + json.count + ' transacciones · actualizado ' + now.toLocaleTimeString('es-CL'));
+  } catch(err){
+    console.error('Error de conexión con Apps Script:', err);
+    setLiveStatus('off', 'No se pudo conectar: ' + (err.message || err) + ' (revisa la consola del navegador con F12 para más detalle)');
+  }
+}
+
+function refreshNow(){
+  const url = document.getElementById('scriptUrlInput').value.trim();
+  if (!url){
+    setLiveStatus('off', 'Pega la URL del Apps Script primero');
+    return;
+  }
+  fetchFromScript(url);
+}
+
+function setAutoRefresh(ms){
+  refreshIntervalMs = ms;
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = null;
+  if (ms > 0){
+    refreshTimer = setInterval(refreshNow, ms);
+  }
+  document.querySelectorAll('#refreshGroup button').forEach(b=>{
+    b.classList.toggle('active', parseInt(b.dataset.interval,10) === ms);
+  });
+}
+
+document.getElementById('btnSaveUrl').addEventListener('click', ()=>{
+  const url = document.getElementById('scriptUrlInput').value.trim();
+  if (url) localStorage.setItem(LS_KEY, url);
+  refreshNow();
+});
+
+document.getElementById('btnRefreshNow').addEventListener('click', refreshNow);
+
+document.getElementById('refreshGroup').addEventListener('click', e=>{
+  if (e.target.tagName !== 'BUTTON') return;
+  const ms = parseInt(e.target.dataset.interval, 10);
+  setAutoRefresh(ms);
+  if (ms > 0 && !document.getElementById('scriptUrlInput').value.trim()){
+    setLiveStatus('off', 'Pega la URL del Apps Script para activar el auto-refresh');
+  }
+});
+
+// Restaurar URL guardada, si existe
+(function initLive(){
+  const saved = localStorage.getItem(LS_KEY);
+  if (saved){
+    document.getElementById('scriptUrlInput').value = saved;
+  }
+})();
+
+// ---- Render inicial con los datos embebidos (snapshot) ----
+renderAll(computeAggregates(DATA.transactions));
+</script>
+</body>
+</html>
