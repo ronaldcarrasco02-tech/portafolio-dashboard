@@ -401,15 +401,49 @@ function setLiveStatus(mode, text){
   document.getElementById('liveLabel').textContent = text;
 }
 
+function jsonpRequest(url, timeoutMs){
+  return new Promise((resolve, reject)=>{
+    const callbackName = 'portfolioJsonp_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+    const script = document.createElement('script');
+    let settled = false;
+
+    const cleanup = ()=>{
+      delete window[callbackName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(timer);
+    };
+
+    window[callbackName] = (data)=>{
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = ()=>{
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('No se pudo cargar el script (revisa que la URL sea correcta y termine en /exec)'));
+    };
+
+    const timer = setTimeout(()=>{
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error('Tiempo de espera agotado esperando respuesta del Apps Script'));
+    }, timeoutMs || 15000);
+
+    const sep = url.indexOf('?') === -1 ? '?' : '&';
+    script.src = url + sep + 'callback=' + callbackName + '&_=' + Date.now();
+    document.body.appendChild(script);
+  });
+}
+
 async function fetchFromScript(url){
   setLiveStatus('off', 'Conectando...');
   try{
-    const res = await fetch(url, {cache:'no-store'});
-    if (!res.ok){
-      setLiveStatus('off', 'El servidor respondió con estado ' + res.status + ' (' + res.statusText + ')');
-      return;
-    }
-    const json = await res.json();
+    const json = await jsonpRequest(url);
     if (json.error){
       setLiveStatus('off', 'Error del script: ' + json.error);
       return;
@@ -420,7 +454,7 @@ async function fetchFromScript(url){
     setLiveStatus('on', 'Conectado · ' + json.count + ' transacciones · actualizado ' + now.toLocaleTimeString('es-CL'));
   } catch(err){
     console.error('Error de conexión con Apps Script:', err);
-    setLiveStatus('off', 'No se pudo conectar: ' + (err.message || err) + ' (revisa la consola del navegador con F12 para más detalle)');
+    setLiveStatus('off', 'No se pudo conectar: ' + (err.message || err));
   }
 }
 
